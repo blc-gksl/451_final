@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+<launch>
+
+<arg name="model" default="$(find tgr_simulation)/urdf/tgr.urdf.xacro"/>
+<arg name="rvizconfig" default="$(find urdf_tutorial)/rviz/urdf.rviz"/>
+
+
+<!-- Launch gazebo -->
+<include file="$(find tgr_simulation)/launch/gazebo.launch">
+  <arg name="model" value="$(arg model)"/>
+ </include>
+
+<node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)"/>
+
+
+ <!-- Run the robot localization package -->
+
+ <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+</node>
+   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+<node name="rqt_robot_steering" pkg="rqt_robot_steering" type="rqt_robot_steering">
+  <param name="default_topic" value="/cmd_vel"/> 
+</node>
+
+</launch>
