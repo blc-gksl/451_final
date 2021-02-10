@@ -4,13 +4,120 @@
 #include <iostream>
 #include <vector>
 #include <memory>
-
+#include <tgr_msgs/Line.h>
+#include <common.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Twist.h>
 #include <bits/stdc++.h>
 #include <bits/stdc++.h>
+const double pi = 3.14159265358979;
 using namespace std;
 
 #define ROW 50
 #define COL 50
+
+float look_ahead_dist;  //in meters. for carrot guidance.
+float cruise_vel;  //in meters/sec. maximum and straight line velocity.
+float vehicle_width;   //in meters. distance between right-left wheels.
+float Pgain_direction;
+float Dgain_direction;//controller gains for reahing commanded direction.
+bool turn_direction;
+
+geometry_msgs::Twist line_follower(tgr_msgs::Line l){    //implements the carrot guidance algorithm. output is either thrust + angular velocity or left wheel velocity + right wheel velocity.
+
+
+    double theta_command;
+    double theta_current = common::toEulerAngle(vehicle_pose.pose.pose.orientation).z;
+    double theta_rate_current = vehicle_pose.twist.twist.angular.z;
+    double theta_error;
+    float vel_right_wheel;
+    float vel_left_wheel;
+    bool turn_direction;  //0:clockwise, 1:counter clockwise
+
+
+
+    if((l.point_end.y==l.point_begin.y && l.point_end.x ==l.point_begin.x) &&(l.point_end.y!=0 || l.point_end.x!=0)){
+
+        theta_command = atan2(l.point_end.y, l.point_end.x);
+
+    }
+    else{
+        geometry_msgs::Point projected_point;
+        projected_point.x = common::projection_on_line(vehicle_pose.pose.pose.position, l).x;
+        projected_point.y = common::projection_on_line(vehicle_pose.pose.pose.position, l).y;
+
+        geometry_msgs::Point ahead_point;
+        ahead_point.x = projected_point.x + common::line_direction(l).x*look_ahead_dist;
+        ahead_point.y = projected_point.y + common::line_direction(l).y*look_ahead_dist;
+
+        theta_command = atan2(ahead_point.y - vehicle_pose.pose.pose.position.y , ahead_point.x - vehicle_pose.pose.pose.position.x );
+
+    }
+
+    if(theta_command<0){theta_command=theta_command + 2*pi;}
+
+    if(theta_current<0){theta_current=theta_current + 2*pi;}
+
+
+    if(theta_command>theta_current){    //chooses the turn direction
+        if(theta_command-theta_current<pi)  {turn_direction=1;}
+        else                                {turn_direction=0;}
+    }
+    else{
+        if(theta_current-theta_command<pi)  {turn_direction=0; }
+        else                                {turn_direction=1;}
+    }
+
+    if(turn_direction)  {theta_error=theta_command-theta_current;   }
+    else                {theta_error=theta_current-theta_command;   theta_rate_current=-theta_rate_current;}
+
+    if(theta_error<0) {theta_error=theta_error + 2*pi;}
+
+    if(l.point_end.y==l.point_begin.y && l.point_end.x ==l.point_begin.x){
+        if(l.point_end.y==0 && l.point_end.x==0){
+            vel_right_wheel=0;
+            vel_left_wheel=0;
+        }
+        else {
+            if (turn_direction) {
+                vel_right_wheel = vehicle_width * (Pgain_direction * theta_error + Dgain_direction * theta_rate_current);  //thera_rate_current is also equal to d(theta_error)/d(t) and has less noise.
+                vel_left_wheel = -vehicle_width * (Pgain_direction * theta_error + Dgain_direction * theta_rate_current);
+            }
+            else {
+                vel_right_wheel = -vehicle_width * (Pgain_direction * theta_error + Dgain_direction * theta_rate_current);
+                vel_left_wheel = vehicle_width * (Pgain_direction * theta_error + Dgain_direction * theta_rate_current);
+            }
+        }
+    }
+    else{
+        if(turn_direction){
+            vel_right_wheel = cruise_vel*((pi-theta_error)/pi) + vehicle_width*(Pgain_direction*theta_error + Dgain_direction*theta_rate_current);  //thera_rate_current is also equal to d(theta_error)/d(t) and has less noise.
+            vel_left_wheel   = cruise_vel*((pi-theta_error)/pi) - vehicle_width*(Pgain_direction*theta_error + Dgain_direction*theta_rate_current);
+        }
+        else{
+            vel_right_wheel = cruise_vel*((pi-theta_error)/pi) - vehicle_width*(Pgain_direction*theta_error + Dgain_direction*theta_rate_current);
+            vel_left_wheel   = cruise_vel*((pi-theta_error)/pi) + vehicle_width*(Pgain_direction*theta_error + Dgain_direction*theta_rate_current);
+        }
+    }
+
+
+    /*    the output version that gives right, left wheel velocities. Not suitable for simulation.
+    tgr_msgs::MotorVal;
+    MotorVal.right = vel_right_wheel;
+    MotorVal.left = vel_left_wheel;
+
+     return MotorVal;
+    */
+
+    geometry_msgs::Twist output;
+
+    output.linear.x = (vel_right_wheel+vel_left_wheel)/2.0;
+    output.angular.z= (vel_right_wheel-vel_left_wheel)/vehicle_width;
+
+    return output;
+
+
+}
 
 // Creating a shortcut for int, int pair type
 typedef pair<int, int> Pair;
@@ -69,29 +176,30 @@ double calculateHValue(int row, int col, Pair dest)
 
 // A Utility Function to trace the path from the source
 // to destination
+
+vector< pair <int,int> > Path;
 void tracePath(cell cellDetails[][COL], Pair dest)
 {
     printf("\nThe Path is ");
     int row = dest.first;
     int col = dest.second;
 
-    stack<Pair> Path;
 
     while (!(cellDetails[row][col].parent_i == row
              && cellDetails[row][col].parent_j == col)) {
-        Path.push(make_pair(row, col));
+        Path.push_back(make_pair(row, col));
         int temp_row = cellDetails[row][col].parent_i;
         int temp_col = cellDetails[row][col].parent_j;
         row = temp_row;
         col = temp_col;
     }
 
-    Path.push(make_pair(row, col));
-    while (!Path.empty()) {
-        pair<int, int> p = Path.top();
-        Path.pop();
-        printf("-> (%d,%d) ", p.first, p.second);
-    }
+    Path.push_back(make_pair(row, col));
+//    while (!Path.empty()) {
+//        pair<int, int> p = Path.top();
+//        Path.pop();
+//        printf("-> (%d,%d) ", p.first, p.second);
+//    }
 
     return;
 }
@@ -646,7 +754,7 @@ geometry_msgs::Point toEulerAngle(geometry_msgs::Quaternion q){
 
     return euler_angles;
 }
-
+static double x = 0,y=0;
 
 int main(int argc, char **argv)
 {
@@ -738,54 +846,92 @@ int main(int argc, char **argv)
         std::cout << std::endl;
     }
 
-    // Source is the left-most bottom-most corner
-    Pair src = make_pair(0, 0);
-
-    // Destination is the left-most top-most corner
-    Pair dest = make_pair(18, 4);
-
-    stack<Pair> Path;
-
-    aStarSearch(myMatrix, src, dest);
 
 
 
-//    while (ros::ok())
-//    {
-//        static double previous_angle = 0;
-//        geometry_msgs::Quaternion q = getModelState.response.pose.orientation;
-//        static double uncertainty = 0;
-//        client = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state") ;
-//        getModelState.request.model_name = modelName ;
-//        getModelState.request.relative_entity_name = relativeEntityName ;
-//        client.call(getModelState);
-//        double x = getModelState.response.pose.position.x;
-//        double y = getModelState.response.pose.position.y;
-//        double yaw = toEulerAngle(q).z ;
-//        double target_x = 5;
-//        double target_y = 48;
-//        double angle_diff = atan2((target_y - y),(target_x-x)) - yaw;
-//        double d_angle = angle_diff - previous_angle;
-//        previous_angle = angle_diff;
-//        double vel = 1; // m/s
-//        if(abs(angle_diff) > 0.3) vel = 0.1;
-//
-//        double P_gain = 1, D_gain = 0.1;
-//
-//
-//        geometry_msgs::Twist vel_output;
-//        vel_output.angular.x = 0;
-//        vel_output.angular.y = 0;
-//        vel_output.angular.z = P_gain * angle_diff + D_gain * d_angle;
-//        vel_output.linear.x = vel;
-//        vel_output.linear.y = 0;
-//        vel_output.linear.z = 0;
-//        cmd_vel_pub.publish(vel_output);
-//
-//
-//        ros::spinOnce();
-//        rate.sleep();
-//    }
+
+    bool start_search = true;
+    bool got_cargo = false;
+    int mission = 0;
+    double stop_x,stop_y;
+    int c = 0;
+    while (ros::ok())
+    {
+
+        static double previous_angle = 0;
+        geometry_msgs::Quaternion q = getModelState.response.pose.orientation;
+        static double uncertainty = 0;
+        client = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state") ;
+        getModelState.request.model_name = modelName ;
+        getModelState.request.relative_entity_name = relativeEntityName ;
+        client.call(getModelState);
+         x = getModelState.response.pose.position.x;
+         y = getModelState.response.pose.position.y;
+        double yaw = toEulerAngle(q).z ;
+        if(yaw > 3.142) yaw = yaw - 3.142;
+
+
+        if (start_search){
+            if(!got_cargo){
+                stop_x = sender[mission][0]  ;stop_y = sender[mission][1];
+            }
+            else{
+                stop_x = receiver[mission][0]  ;stop_y = receiver[mission][1];
+            }
+            // Source is the left-most bottom-most corner
+            Pair src = make_pair(x, y);
+
+            // Destination is the left-most top-most corner
+            Pair dest = make_pair(stop_x, stop_y);
+
+            aStarSearch(myMatrix, src, dest);
+            start_search = false;
+            for(int i=0; i < Path.size();i++) cout <<Path[i].first<<Path[i].second<<endl;
+
+        }
+        double target_x = Path[Path.size()-1-c].first;
+        double target_y = Path[Path.size()-1-c].second;;
+        double angle_diff = atan2((target_y - y),(target_x-x)) - yaw;
+        double d_angle = angle_diff - previous_angle;
+        previous_angle = angle_diff;
+        double vel = 0.5; // m/s
+        if(abs(angle_diff) > 1) vel = 0;
+
+        double P_gain = 1, D_gain = 0.1;
+
+        if(isAchieved(x,y,target_x,target_y)) c++;
+
+        geometry_msgs::Twist vel_output;
+
+        if(!isAchieved(x,y,stop_x,stop_y)){
+            vel_output.angular.x = 0;
+            vel_output.angular.y = 0;
+            vel_output.angular.z = P_gain * angle_diff + D_gain * d_angle;
+            vel_output.linear.x = vel;
+            vel_output.linear.y = 0;
+            vel_output.linear.z = 0;
+            cmd_vel_pub.publish(vel_output);
+        }
+
+        else{
+            vel_output.angular.x = 0;
+            vel_output.angular.y = 0;
+            vel_output.angular.z = 0;
+            vel_output.linear.x = 0;
+            vel_output.linear.y = 0;
+            vel_output.linear.z = 0;
+            cmd_vel_pub.publish(vel_output);
+            if(got_cargo) mission++;
+            c=0;
+            got_cargo = !got_cargo;
+            start_search = true;
+            Path.clear();
+        }
+
+
+        ros::spinOnce();
+        rate.sleep();
+    }
 
 
     return 0;

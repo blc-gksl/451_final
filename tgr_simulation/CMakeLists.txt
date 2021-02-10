@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
         image_transport
         sensor_msgs
         nav_msgs
+		tgr_msgs
 )
 find_package(gazebo REQUIRED)
 include_directories(SYSTEM ${GAZEBO_INCLUDE_DIRS})
@@ -40,5 +41,5 @@ add_executable(objSpawner src/objSpawner.cpp include/gazebo_cube_spawner.h)
 target_link_libraries(objSpawner ${catkin_LIBRARIES}${GAZEBO_LIBRARIES})
 add_executable(readdemo src/readdemo.cpp)
 target_link_libraries(readdemo ${catkin_LIBRARIES}${GAZEBO_LIBRARIES})
-add_executable(main src/main.cpp )
+add_executable(main src/main.cpp include/common.h include/common.cpp)
 target_link_libraries(main ${catkin_LIBRARIES}${GAZEBO_LIBRARIES})
