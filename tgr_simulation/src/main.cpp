@@ -10,20 +10,21 @@
 #include <geometry_msgs/Twist.h>
 #include <bits/stdc++.h>
 #include <bits/stdc++.h>
+#include <nav_msgs/Odometry.h>
 const double pi = 3.14159265358979;
 using namespace std;
 
 #define ROW 50
 #define COL 50
 
-float look_ahead_dist;  //in meters. for carrot guidance.
-float cruise_vel;  //in meters/sec. maximum and straight line velocity.
-float vehicle_width;   //in meters. distance between right-left wheels.
-float Pgain_direction;
-float Dgain_direction;//controller gains for reahing commanded direction.
+float look_ahead_dist = 5.0;  //in meters. for carrot guidance.
+float cruise_vel = 2;  //in meters/sec. maximum and straight line velocity.
+float vehicle_width = 0.71;   //in meters. distance between right-left wheels.
+float Pgain_direction= 1;
+float Dgain_direction= -0.05;//controller gains for reahing commanded direction.
 bool turn_direction;
 
-geometry_msgs::Twist line_follower(tgr_msgs::Line l){    //implements the carrot guidance algorithm. output is either thrust + angular velocity or left wheel velocity + right wheel velocity.
+geometry_msgs::Twist line_follower(tgr_msgs::Line l, nav_msgs::Odometry vehicle_pose){    //implements the carrot guidance algorithm. output is either thrust + angular velocity or left wheel velocity + right wheel velocity.
 
 
     double theta_command;
@@ -728,7 +729,7 @@ double distance(double x,double y,double targetx,double targety){
 }
 
 bool isAchieved(double x,double y,double targetx,double targety){
-    double treshold = 0.1;
+    double treshold = 0.5;
     return (distance(x,y,targetx,targety)<treshold);
 }
 
@@ -754,7 +755,6 @@ geometry_msgs::Point toEulerAngle(geometry_msgs::Quaternion q){
 
     return euler_angles;
 }
-static double x = 0,y=0;
 
 int main(int argc, char **argv)
 {
@@ -825,7 +825,7 @@ int main(int argc, char **argv)
 
     double theDistance;
     for(int k=0; k<N ;k++){
-        double myBorder = myObstacles[k][2]+0.1+0.5;
+        double myBorder = myObstacles[k][2]+1+0.5;
 
         for(int i=0; i<50; i++){
             for(int j=0; j<50; j++){
@@ -865,10 +865,13 @@ int main(int argc, char **argv)
         getModelState.request.model_name = modelName ;
         getModelState.request.relative_entity_name = relativeEntityName ;
         client.call(getModelState);
-         x = getModelState.response.pose.position.x;
-         y = getModelState.response.pose.position.y;
-        double yaw = toEulerAngle(q).z ;
-        if(yaw > 3.142) yaw = yaw - 3.142;
+        double x = getModelState.response.pose.position.x;
+        double y = getModelState.response.pose.position.y;
+        nav_msgs::Odometry vehicle_pose;
+        vehicle_pose.pose.pose.position.x = x;
+        vehicle_pose.pose.pose.position.y = y;
+        vehicle_pose.pose.pose.orientation = getModelState.response.pose.orientation;
+        vehicle_pose.twist.twist = getModelState.response.twist;
 
 
         if (start_search){
@@ -890,27 +893,19 @@ int main(int argc, char **argv)
 
         }
         double target_x = Path[Path.size()-1-c].first;
-        double target_y = Path[Path.size()-1-c].second;;
-        double angle_diff = atan2((target_y - y),(target_x-x)) - yaw;
-        double d_angle = angle_diff - previous_angle;
-        previous_angle = angle_diff;
-        double vel = 0.5; // m/s
-        if(abs(angle_diff) > 1) vel = 0;
+        double target_y = Path[Path.size()-1-c].second;
+
 
         double P_gain = 1, D_gain = 0.1;
-
+        tgr_msgs::Line current_line;
+        current_line.point_begin.x = x; current_line.point_begin.y = y;
+        current_line.point_end.x = target_x; current_line.point_end.y = target_y;
         if(isAchieved(x,y,target_x,target_y)) c++;
-
+        cout << c;
         geometry_msgs::Twist vel_output;
 
         if(!isAchieved(x,y,stop_x,stop_y)){
-            vel_output.angular.x = 0;
-            vel_output.angular.y = 0;
-            vel_output.angular.z = P_gain * angle_diff + D_gain * d_angle;
-            vel_output.linear.x = vel;
-            vel_output.linear.y = 0;
-            vel_output.linear.z = 0;
-            cmd_vel_pub.publish(vel_output);
+            cmd_vel_pub.publish(line_follower(current_line,vehicle_pose));
         }
 
         else{
