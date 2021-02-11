@@ -17,7 +17,7 @@ using namespace std;
 #define ROW 50
 #define COL 50
 
-float look_ahead_dist = 5.0;  //in meters. for carrot guidance.
+float look_ahead_dist =15.0;  //in meters. for carrot guidance.
 float cruise_vel = 2;  //in meters/sec. maximum and straight line velocity.
 float vehicle_width = 0.71;   //in meters. distance between right-left wheels.
 float Pgain_direction= 1;
@@ -876,13 +876,14 @@ int main(int argc, char **argv)
 
 
     bool start_search = true;
-    bool got_cargo = false;
     int mission = 0;
     double stop_x,stop_y;
     int path_iterator = 0;
+    double total_distance = 0;
+    double x=0,y=0,px,py;
     while (ros::ok())
     {
-
+        static double target_x=0, target_y=0;
         static double previous_angle = 0;
         geometry_msgs::Quaternion q = getModelState.response.pose.orientation;
         static double uncertainty = 0;
@@ -890,8 +891,10 @@ int main(int argc, char **argv)
         getModelState.request.model_name = modelName ;
         getModelState.request.relative_entity_name = relativeEntityName ;
         client.call(getModelState);
-        double x = getModelState.response.pose.position.x;
-        double y = getModelState.response.pose.position.y;
+        px=x;py=y;
+        x = getModelState.response.pose.position.x;
+        y = getModelState.response.pose.position.y;
+        total_distance += distance(px,py,x,y);
         nav_msgs::Odometry vehicle_pose;
         vehicle_pose.pose.pose.position.x = x;
         vehicle_pose.pose.pose.position.y = y;
@@ -905,7 +908,7 @@ int main(int argc, char **argv)
             stop_x = path[mission+1][0]  ;stop_y = path[mission+1][1];
 
             // Source is the left-most bottom-most corner
-            Pair src = make_pair(x, y);
+            Pair src = make_pair(path[mission][0], path[mission][1]);
 
             // Destination is the left-most top-most corner
             Pair dest = make_pair(stop_x, stop_y);
@@ -915,12 +918,17 @@ int main(int argc, char **argv)
             for(int i=0; i < Path.size();i++) cout <<Path[i].first<<Path[i].second<<endl;
 
         }
-        double target_x = Path[Path.size()-1-path_iterator].first;
-        double target_y = Path[Path.size()-1-path_iterator].second;
+
+        while(isAchieved(x,y,Path[Path.size()-2-path_iterator].first,Path[Path.size()-2-path_iterator].second)) path_iterator++;
+        target_x = Path[Path.size()-2-path_iterator].first;
+        target_y = Path[Path.size()-2-path_iterator].second;
 
 
         tgr_msgs::Line current_line;
-        current_line.point_begin.x = x; current_line.point_begin.y = y;
+            current_line.point_begin.x = x;
+            current_line.point_begin.y = y;
+
+
         current_line.point_end.x = target_x; current_line.point_end.y = target_y;
         if(isAchieved(x,y,target_x,target_y)) path_iterator++;
 
@@ -939,6 +947,7 @@ int main(int argc, char **argv)
             vel_output.linear.z = 0;
             cmd_vel_pub.publish(vel_output);
             mission++;
+            if(mission == 2*M) break;
             path_iterator=0;
             start_search = true;
             Path.clear();
@@ -948,7 +957,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
         rate.sleep();
     }
-
+    cout << "Total Distance" << total_distance << endl;
 
     return 0;
 }

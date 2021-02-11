@@ -23,5 +23,5 @@
 <node name="rqt_robot_steering" pkg="rqt_robot_steering" type="rqt_robot_steering">
   <param name="default_topic" value="/cmd_vel"/> 
 </node>
-
+    <node pkg="tgr_simulation" type="objSpawner" name="objSpawner"  required="false" output="screen"></node>
 </launch>
