@@ -734,28 +734,6 @@ bool isAchieved(double x,double y,double targetx,double targety){
 }
 
 
-geometry_msgs::Point toEulerAngle(geometry_msgs::Quaternion q){
-    geometry_msgs::Point euler_angles;
-    // roll (x-axis rotation)
-    double sinr_cosp = +2.0 * (q.w * q.x + q.y * q.z);
-    double cosr_cosp = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
-    euler_angles.x = std::atan2(sinr_cosp, cosr_cosp);
-
-    // pitch (y-axis rotation)
-    double sinp = +2.0 * (q.w * q.y - q.z * q.x);
-    if (std::fabs(sinp) >= 1)
-        euler_angles.y = std::copysign(M_PI / 2, sinp);  // use 90 degrees if out of range
-    else
-        euler_angles.y = std::asin(sinp);
-
-    // yaw (z-axis rotation)
-    double siny_cosp = +2.0 * (q.w * q.z + q.x * q.y);
-    double cosy_cosp = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-    euler_angles.z = std::atan2(siny_cosp, cosy_cosp);
-
-    return euler_angles;
-}
-
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "main");
@@ -776,11 +754,11 @@ int main(int argc, char **argv)
     }
 
     char file_path[256] = "/../../../src/tgr_simulation/read.txt";
-    std::string path;
-    path = strcat(buffer,file_path);
+
     std::fstream myfile;
-    std::cout << path << std::endl;
-    myfile.open(path, std::ios_base::in);
+    string file_Path = strcat(buffer,file_path);
+    std::cout << strcat(buffer,file_path) << std::endl;
+    myfile.open(file_Path, std::ios_base::in);
     if (!myfile)
     {
         std::cout << "\nError opening file.\n";
@@ -790,17 +768,64 @@ int main(int argc, char **argv)
     int M,N;
     myfile >> M;
 
-    double sender[M][2];
-    double receiver[M][2];
+    vector< pair <int,int> > sender;
+    vector< pair <int,int> > receiver;
+    double a,b,c,d;
+
     for(int i=0; i< M; i++){
-        for(int j=0; j<2;j++){
-            myfile >> sender[i][j];
+
+        myfile >> a;
+        myfile >> b;
+        sender.push_back(make_pair(a, b));
+//            std::cout<< "sender "<<sender[i].first <<" " << sender[i].second<<std::endl;
+        myfile >> c;
+        myfile >> d;
+        receiver.push_back(make_pair(c, d));
+
+//            std::cout<< "receiver "<<receiver[i].first <<" " << receiver[i].second<<std::endl;
+    }
+
+    double path[2*M+1][2];
+    int s=M,r=0;
+    path[0][0] = 0; path[0][1]=0;
+    int se[M];
+    for(int i=0; i<2*M + 1; i++){
+        double min_distance = 100;
+        bool sent = true;
+        int c;
+        static int a = 0;
+
+        for(int j=0; j<s;j++){
+            double d = distance(path[i][0],path[i][1],sender[j].first,sender[j].second);
+            if(min_distance > d) {
+                min_distance = d;
+                c = j;
+            }
+        }
+        for (int k=r; k<(M-s) ; k++){
+            double d = distance(path[i][0],path[i][1],receiver[se[k]].first,receiver[se[k]].second);
+            if(min_distance > d){
+                min_distance = d;
+                sent = false;
+                c=se[k];
+            }
+        }
+        if(sent){
+            path[i+1][0] = sender[c].first;path[i+1][1] = sender[c].second;
+            se[a]=c;
+            sender.erase(sender.begin() + c);
+            a++;
+            s--;
+        }
+        else {
+            path[i+1][0] = receiver[c].first;path[i+1][1] = receiver[c].second;
+            receiver.erase(receiver.begin() + c);
+
+            r++;
         }
 
-        for(int j=0; j<2;j++){
-            myfile >> receiver[i][j];
-        }
     }
+
     myfile >> N;
     double myObstacles[N][4];
 
@@ -854,7 +879,7 @@ int main(int argc, char **argv)
     bool got_cargo = false;
     int mission = 0;
     double stop_x,stop_y;
-    int c = 0;
+    int path_iterator = 0;
     while (ros::ok())
     {
 
@@ -875,12 +900,10 @@ int main(int argc, char **argv)
 
 
         if (start_search){
-            if(!got_cargo){
-                stop_x = sender[mission][0]  ;stop_y = sender[mission][1];
-            }
-            else{
-                stop_x = receiver[mission][0]  ;stop_y = receiver[mission][1];
-            }
+
+
+            stop_x = path[mission+1][0]  ;stop_y = path[mission+1][1];
+
             // Source is the left-most bottom-most corner
             Pair src = make_pair(x, y);
 
@@ -892,16 +915,15 @@ int main(int argc, char **argv)
             for(int i=0; i < Path.size();i++) cout <<Path[i].first<<Path[i].second<<endl;
 
         }
-        double target_x = Path[Path.size()-1-c].first;
-        double target_y = Path[Path.size()-1-c].second;
+        double target_x = Path[Path.size()-1-path_iterator].first;
+        double target_y = Path[Path.size()-1-path_iterator].second;
 
 
-        double P_gain = 1, D_gain = 0.1;
         tgr_msgs::Line current_line;
         current_line.point_begin.x = x; current_line.point_begin.y = y;
         current_line.point_end.x = target_x; current_line.point_end.y = target_y;
-        if(isAchieved(x,y,target_x,target_y)) c++;
-        cout << c;
+        if(isAchieved(x,y,target_x,target_y)) path_iterator++;
+
         geometry_msgs::Twist vel_output;
 
         if(!isAchieved(x,y,stop_x,stop_y)){
@@ -916,9 +938,8 @@ int main(int argc, char **argv)
             vel_output.linear.y = 0;
             vel_output.linear.z = 0;
             cmd_vel_pub.publish(vel_output);
-            if(got_cargo) mission++;
-            c=0;
-            got_cargo = !got_cargo;
+            mission++;
+            path_iterator=0;
             start_search = true;
             Path.clear();
         }
