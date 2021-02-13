@@ -104,12 +104,16 @@ void GazeboCubeSpawner::spawnPrimitive(const std::string& name,const std::string
         </inertia>\
           </inertial>";
     }
-    s<<"<collision name='collision'>\
-        <geometry>"<<geometryString;
-    s<<"</geometry>";
 
-    s<<"</collision>\
-          <visual name='visual'>";
+       if(!doCube) {
+           s<<"<collision name='collision'>\
+        <geometry>"<<geometryString;
+           s<<"</geometry>\
+           </collision>";
+
+        }
+       else            s << "<gravity>0</gravity>";
+    s<<"<visual name='visual'>";
     s<<"<geometry>"<<geometryString;
     s<<"</geometry>\
         <material>\
@@ -179,14 +183,14 @@ int main(int argc, char** argv) {
         }
         std::string text = "sender";
         text += std::to_string(i);
-        spawner.spawnPrimitive(text,"Blue",true,"world",sender[i][0],sender[i][1],0,0,0,0,1,0.5,0.5,0.00001,500000);
+        spawner.spawnPrimitive(text,"Blue",true,"world",sender[i][0],sender[i][1],0.25,0,0,0,1,1,1,0.5,500000);
 
         for(int j=0; j<2;j++){
             myfile >> receiver[i][j];
         }
         text = "receiver";
         text += std::to_string(i);
-        spawner.spawnPrimitive(text,"Green",true,"world",receiver[i][0],receiver[i][1],0,0,0,0,1,0.5,0.5,0.00001,500000);
+        spawner.spawnPrimitive(text,"Green",true,"world",receiver[i][0],receiver[i][1],0.25,0,0,0,1,1,1,0.5,500000);
     }
     myfile >> N;
     double obstacles[N][4];
@@ -197,7 +201,7 @@ int main(int argc, char** argv) {
         }
         std::string text = "obstacle";
         text += std::to_string(i);
-        spawner.spawnPrimitive(text,"Yellow",false,"world",obstacles[i][0],obstacles[i][1],0,0,0,0,1,obstacles[i][2],obstacles[i][2],0.00001,5);
+        spawner.spawnPrimitive(text,"Yellow",false,"world",obstacles[i][0],obstacles[i][1],obstacles[i][3]/2,0,0,0,1,obstacles[i][2],obstacles[i][3],0.00001,5);
 
     }
 

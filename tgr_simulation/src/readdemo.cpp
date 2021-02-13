@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 #include <math.h>
+#include <algorithm>
+
 using namespace std;
 double distance(double x,double y,double targetx,double targety){
     return (sqrt((targetx-x)*(targetx-x) + (targety-y)*(targety-y)));
@@ -47,43 +49,62 @@ int main(int argc, char * argv[])
         }
     }
     double path[2*M+1][2];
-    int s=M,r=0;
+    int r=0;
     path[0][0] = 0; path[0][1]=0;
-    int se[M];
+    vector <int> se;
     for(int i=0; i<2*M + 1; i++){
-        double min_distance = 100;
+        double min_distance = 1000;
+        double de = 0;
         bool sent = true;
-        int c;
+        bool brek = false;
+        int c=0;
         static int a = 0;
-
-        for(int j=0; j<s;j++){
-            double d = distance(path[i][0],path[i][1],sender[j].first,sender[j].second);
-            if(min_distance > d) {
-                min_distance = d;
+        for(int j=0; j<sender.size();j++){
+            for(int count = 0 ; count <se.size() ; count++){
+                int q = se[count];
+                if(sender[j] == sender[q]){
+                    brek = true;
+                }
+            }
+            if(brek) {
+                brek = false;
+                continue;
+            }
+            de = distance(path[i][0], path[i][1], sender[j].first, sender[j].second);
+            if(min_distance > de) {
+                min_distance = de;
                 c = j;
+                sent=true;
             }
         }
-        for (int k=r; k<(M-s) ; k++){
-            double d = distance(path[i][0],path[i][1],receiver[se[k]].first,receiver[se[k]].second);
-            if(min_distance > d){
-                min_distance = d;
+        for (int k=0; k<se.size() ; k++){
+            de = distance(path[i][0], path[i][1], receiver[se[k]].first, receiver[se[k]].second);
+            if(min_distance > de){
+                min_distance = de;
                 sent = false;
-                c=se[k];
+                c=k;
+                cout << de << endl;
             }
         }
         if(sent){
             path[i+1][0] = sender[c].first;path[i+1][1] = sender[c].second;
-            se[a]=c;
-            sender.erase(sender.begin() + c);
-            a++;
-            s--;
+
+            se.push_back(c);
+
         }
         else {
-            path[i+1][0] = receiver[c].first;path[i+1][1] = receiver[c].second;
-            receiver.erase(receiver.begin() + c);
+            path[i+1][0] = receiver[se[c]].first;path[i+1][1] = receiver[se[c]].second;
 
-            r++;
+                for(int l=0 ; l<se.size() ;l++){
+                    if(se[c] < se[l]){
+                        se[l]=se[l] -1;
+                    }
+                }
+            receiver.erase(receiver.begin() + se[c]);
+            sender.erase(sender.begin() + se[c]);
+            se.erase(se.begin() + c);
         }
+
 
     }
     for(int i=0; i< 2*M+1; i++){

@@ -14,9 +14,11 @@
 const double pi = 3.14159265358979;
 using namespace std;
 
-#define ROW 50
-#define COL 50
 
+const int area = 50;
+const int parameter = 4;
+const int ROW = area * parameter;
+const int COL = ROW;
 float look_ahead_dist =15.0;  //in meters. for carrot guidance.
 float cruise_vel = 2;  //in meters/sec. maximum and straight line velocity.
 float vehicle_width = 0.71;   //in meters. distance between right-left wheels.
@@ -208,18 +210,18 @@ void tracePath(cell cellDetails[][COL], Pair dest)
 // A Function to find the shortest path between
 // a given source cell to a destination cell according
 // to A* Search Algorithm
-void aStarSearch(int grid[][COL], Pair src, Pair dest)
+int aStarSearch(int grid[][COL], Pair src, Pair dest)
 {
     // If the source is out of range
     if (isValid(src.first, src.second) == false) {
         printf("Source is invalid\n");
-        return;
+        return -1;
     }
 
     // If the destination is out of range
     if (isValid(dest.first, dest.second) == false) {
         printf("Destination is invalid\n");
-        return;
+        return -1;
     }
 
     // Either the source or the destination is blocked
@@ -227,14 +229,14 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
         || isUnBlocked(grid, dest.first, dest.second)
            == false) {
         printf("Source or the destination is blocked\n");
-        return;
+        return -1;
     }
 
     // If the destination cell is the same as source cell
     if (isDestination(src.first, src.second, dest)
         == true) {
         printf("We are already at the destination\n");
-        return;
+        return -1;
     }
 
     // Create a closed list and initialise it to false which
@@ -333,7 +335,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
                 // If the successor is already on the closed
                 // list or if it is blocked, then ignore it.
@@ -381,7 +383,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
                 // If the successor is already on the closed
                 // list or if it is blocked, then ignore it.
@@ -428,7 +430,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
 
                 // If the successor is already on the closed
@@ -477,7 +479,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
 
                 // If the successor is already on the closed
@@ -527,7 +529,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
 
                 // If the successor is already on the closed
@@ -577,7 +579,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
 
                 // If the successor is already on the closed
@@ -626,7 +628,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
 
                 // If the successor is already on the closed
@@ -676,7 +678,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
                 printf("The destination cell is found\n");
                 tracePath(cellDetails, dest);
                 foundDest = true;
-                return;
+                return 1;
             }
 
                 // If the successor is already on the closed
@@ -721,7 +723,7 @@ void aStarSearch(int grid[][COL], Pair src, Pair dest)
     if (foundDest == false)
         printf("Failed to find the Destination Cell\n");
 
-    return;
+    return -1;
 }
 
 double distance(double x,double y,double targetx,double targety){
@@ -729,7 +731,7 @@ double distance(double x,double y,double targetx,double targety){
 }
 
 bool isAchieved(double x,double y,double targetx,double targety){
-    double treshold = 0.5;
+    double treshold = 0.75;
     return (distance(x,y,targetx,targety)<treshold);
 }
 
@@ -786,46 +788,63 @@ int main(int argc, char **argv)
     }
 
     double path[2*M+1][2];
-    int s=M,r=0;
     path[0][0] = 0; path[0][1]=0;
-    int se[M];
+    vector <int> se;
     for(int i=0; i<2*M + 1; i++){
-        double min_distance = 100;
+        double min_distance = 1000;
+        double de = 0;
         bool sent = true;
-        int c;
+        bool brek = false;
+        int c=0;
         static int a = 0;
-
-        for(int j=0; j<s;j++){
-            double d = distance(path[i][0],path[i][1],sender[j].first,sender[j].second);
-            if(min_distance > d) {
-                min_distance = d;
+        for(int j=0; j<sender.size();j++){
+            for(int count = 0 ; count <se.size() ; count++){
+                int q = se[count];
+                if(sender[j] == sender[q]){
+                    brek = true;
+                }
+            }
+            if(brek) {
+                brek = false;
+                continue;
+            }
+            de = distance(path[i][0], path[i][1], sender[j].first, sender[j].second);
+            if(min_distance > de) {
+                min_distance = de;
                 c = j;
+                sent=true;
             }
         }
-        for (int k=r; k<(M-s) ; k++){
-            double d = distance(path[i][0],path[i][1],receiver[se[k]].first,receiver[se[k]].second);
-            if(min_distance > d){
-                min_distance = d;
+        for (int k=0; k<se.size() ; k++){
+            de = distance(path[i][0], path[i][1], receiver[se[k]].first, receiver[se[k]].second);
+            if(min_distance > de){
+                min_distance = de;
                 sent = false;
-                c=se[k];
+                c=k;
+                cout << de << endl;
             }
         }
         if(sent){
             path[i+1][0] = sender[c].first;path[i+1][1] = sender[c].second;
-            se[a]=c;
-            sender.erase(sender.begin() + c);
-            a++;
-            s--;
+
+            se.push_back(c);
+
         }
         else {
-            path[i+1][0] = receiver[c].first;path[i+1][1] = receiver[c].second;
-            receiver.erase(receiver.begin() + c);
+            path[i+1][0] = receiver[se[c]].first;path[i+1][1] = receiver[se[c]].second;
 
-            r++;
+            for(int l=0 ; l<se.size() ;l++){
+                if(se[c] < se[l]){
+                    se[l]=se[l] -1;
+                }
+            }
+            receiver.erase(receiver.begin() + se[c]);
+            sender.erase(sender.begin() + se[c]);
+            se.erase(se.begin() + c);
         }
 
-    }
 
+    }
     myfile >> N;
     double myObstacles[N][4];
 
@@ -845,16 +864,16 @@ int main(int argc, char **argv)
         }
     }
 
-    int myMatrix[50][50];
-    for(int i=0;i<50;i++) for(int j=0; j<50; j++) myMatrix[i][j] = 1;
+    int myMatrix[ROW][COL];
+    for(int i=0;i<ROW;i++) for(int j=0; j<ROW; j++) myMatrix[i][j] = 1;
 
     double theDistance;
     for(int k=0; k<N ;k++){
-        double myBorder = myObstacles[k][2]+1+0.5;
+        double myBorder = parameter * (myObstacles[k][2]+1.5+0.5);
 
-        for(int i=0; i<50; i++){
-            for(int j=0; j<50; j++){
-                theDistance = sqrt(pow(myObstacles[k][0] - (double)i,2) + pow(myObstacles[k][1] - (double)j,2));
+        for(int i=0; i<ROW; i++){
+            for(int j=0; j<ROW; j++){
+                theDistance =  sqrt( pow(parameter*myObstacles[k][0]+parameter-1 - (double)i,2) + pow( parameter*myObstacles[k][1]+parameter-1- (double)j,2));
                 if(theDistance <= myBorder){
                     myMatrix[i][j] = 0;
                 }
@@ -862,10 +881,9 @@ int main(int argc, char **argv)
         }
     }
 
-
     //print the map
-    for(int i=0; i<50; i++) {
-        for (int j = 0; j < 50; j++) {
+    for(int i=0; i<ROW; i++) {
+        for (int j = 0; j < ROW; j++) {
             std::cout << myMatrix[i][j] << " ";
         }
         std::cout << std::endl;
@@ -905,23 +923,28 @@ int main(int argc, char **argv)
         if (start_search){
 
 
-            stop_x = path[mission+1][0]  ;stop_y = path[mission+1][1];
+            stop_x = (double)parameter * path[mission+1][0]  ;stop_y = (double)parameter * path[mission+1][1];
 
             // Source is the left-most bottom-most corner
-            Pair src = make_pair(path[mission][0], path[mission][1]);
+            Pair src = make_pair((double)parameter * path[mission][0], (double)parameter * path[mission][1]);
 
             // Destination is the left-most top-most corner
             Pair dest = make_pair(stop_x, stop_y);
 
-            aStarSearch(myMatrix, src, dest);
+            int result = aStarSearch(myMatrix, src, dest);
             start_search = false;
-            for(int i=0; i < Path.size();i++) cout <<Path[i].first<<Path[i].second<<endl;
-
+            if(result == -1){
+                mission++;
+                start_search = true;
+                cout << "I can not go to next point. " << endl;
+                continue;
+            }
+            for(int i=Path.size()-1; 0 <= i ;i--) cout  <<Path[i].first / (double)parameter<< " "<<Path[i].second / (double)parameter<<endl;
         }
 
-        while(isAchieved(x,y,Path[Path.size()-2-path_iterator].first,Path[Path.size()-2-path_iterator].second)) path_iterator++;
-        target_x = Path[Path.size()-2-path_iterator].first;
-        target_y = Path[Path.size()-2-path_iterator].second;
+        while(isAchieved(x,y,Path[Path.size()-2-path_iterator].first / parameter,Path[Path.size()-2-path_iterator].second / parameter)) path_iterator++;
+        target_x = Path[Path.size()-2-path_iterator].first / (double)parameter;
+        target_y = Path[Path.size()-2-path_iterator].second / (double)parameter;
 
 
         tgr_msgs::Line current_line;
@@ -934,7 +957,7 @@ int main(int argc, char **argv)
 
         geometry_msgs::Twist vel_output;
 
-        if(!isAchieved(x,y,stop_x,stop_y)){
+        if(!isAchieved(x,y,stop_x/(double)parameter,stop_y/(double)parameter)){
             cmd_vel_pub.publish(line_follower(current_line,vehicle_pose));
         }
 
@@ -951,13 +974,14 @@ int main(int argc, char **argv)
             path_iterator=0;
             start_search = true;
             Path.clear();
+            ros::Duration(1.0).sleep();
         }
 
 
         ros::spinOnce();
         rate.sleep();
     }
-    cout << "Total Distance" << total_distance << endl;
+    cout << "Total Distance = " << total_distance <<"m" << endl;
 
     return 0;
 }
