@@ -760,7 +760,7 @@ int main(int argc, char **argv)
     std::fstream myfile;
     string file_Path = strcat(buffer,file_path);
     std::cout << strcat(buffer,file_path) << std::endl;
-    myfile.open(file_Path, std::ios_base::in);
+    myfile.open("/home/berkay/finalprj_ws/src/tgr_simulation/read.txt", std::ios_base::in); // change the path
     if (!myfile)
     {
         std::cout << "\nError opening file.\n";
@@ -846,6 +846,18 @@ int main(int argc, char **argv)
 
 
     }
+   cout <<"Route is : ";
+    for(int i=0; i< 2*M+1; i++){
+        cout << "(";
+        for(int j=0; j<2;j++){
+            std::cout<<path[i][j];
+            if(j==0){
+                cout <<  ", ";
+            }
+        }
+        cout << ") ";
+    }
+    cout<<std::endl;
     myfile >> N;
     double myObstacles[N][4];
 
@@ -883,12 +895,12 @@ int main(int argc, char **argv)
     }
 
     //print the map
-    for(int i=0; i<ROW; i++) {
-        for (int j = 0; j < ROW; j++) {
-            std::cout << myMatrix[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
+//    for(int i=0; i<ROW; i++) {
+//        for (int j = 0; j < ROW; j++) {
+//            std::cout << myMatrix[i][j] << " ";
+//        }
+//        std::cout << std::endl;
+//    }
 
 
 

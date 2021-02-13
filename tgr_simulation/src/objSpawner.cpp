@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
     path = strcat(buffer,file_path);
     std::fstream myfile;
     std::cout << path << std::endl;
-    myfile.open("/home/berkay/finalprj_ws/src/tgr_simulation/read.txt", std::ios_base::in);
+    myfile.open("/home/berkay/finalprj_ws/src/tgr_simulation/read.txt", std::ios_base::in); // change the path
     if (!myfile)
     {
         std::cout << "\nError opening file.\n";
