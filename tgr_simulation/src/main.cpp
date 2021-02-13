@@ -16,7 +16,7 @@ using namespace std;
 
 
 const int area = 50;
-const int parameter = 4;
+const int parameter = 2;
 const int ROW = area * parameter;
 const int COL = ROW;
 float look_ahead_dist =15.0;  //in meters. for carrot guidance.
@@ -788,6 +788,8 @@ int main(int argc, char **argv)
     }
 
     double path[2*M+1][2];
+    double picdropcontrol[2*M+1];
+    picdropcontrol[0] = 0;
     path[0][0] = 0; path[0][1]=0;
     vector <int> se;
     for(int i=0; i<2*M + 1; i++){
@@ -821,17 +823,16 @@ int main(int argc, char **argv)
                 min_distance = de;
                 sent = false;
                 c=k;
-                cout << de << endl;
             }
         }
         if(sent){
-            path[i+1][0] = sender[c].first;path[i+1][1] = sender[c].second;
+            path[i+1][0] = sender[c].first;path[i+1][1] = sender[c].second;picdropcontrol[i+1]=1;
 
             se.push_back(c);
 
         }
         else {
-            path[i+1][0] = receiver[se[c]].first;path[i+1][1] = receiver[se[c]].second;
+            path[i+1][0] = receiver[se[c]].first;path[i+1][1] = receiver[se[c]].second;picdropcontrol[i+1]=-1;
 
             for(int l=0 ; l<se.size() ;l++){
                 if(se[c] < se[l]){
@@ -895,6 +896,7 @@ int main(int argc, char **argv)
 
     bool start_search = true;
     int mission = 0;
+    int numOfPick=0,numOfDrop=0;
     double stop_x,stop_y;
     int path_iterator = 0;
     double total_distance = 0;
@@ -939,6 +941,8 @@ int main(int argc, char **argv)
                 cout << "I can not go to next point. " << endl;
                 continue;
             }
+            if(picdropcontrol[mission+1] == -1.0) numOfDrop++;
+            else if(picdropcontrol[mission+1] == 1.0) numOfPick++;
             for(int i=Path.size()-1; 0 <= i ;i--) cout  <<Path[i].first / (double)parameter<< " "<<Path[i].second / (double)parameter<<endl;
         }
 
@@ -982,6 +986,6 @@ int main(int argc, char **argv)
         rate.sleep();
     }
     cout << "Total Distance = " << total_distance <<"m" << endl;
-
+    cout << "Number of pickups = " << numOfPick <<endl<<"Number of drop-offs = "<<numOfDrop<<endl;
     return 0;
 }
