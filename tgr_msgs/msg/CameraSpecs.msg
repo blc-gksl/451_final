@@ -1,0 +1,6 @@
+int32 vertical_resolution
+int32 horizontal_resolution
+float64 vertical_fov
+float64 horizontal_fov
+geometry_msgs/Point camera_position
+geometry_msgs/Point camera_orientation

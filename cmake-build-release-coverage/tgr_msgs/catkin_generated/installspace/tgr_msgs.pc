@@ -1,0 +1,8 @@
+prefix=/home/berkay/finalprj_ws/install
+
+Name: tgr_msgs
+Description: Description of tgr_msgs
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: geometry_msgs std_msgs message_runtime

@@ -1,0 +1,2 @@
+set(tgr_msgs_MESSAGE_FILES "/home/berkay/finalprj_ws/src/tgr_msgs/msg/Line.msg;/home/berkay/finalprj_ws/src/tgr_msgs/msg/MotorVal.msg;/home/berkay/finalprj_ws/src/tgr_msgs/msg/Int.msg;/home/berkay/finalprj_ws/src/tgr_msgs/msg/CameraSpecs.msg;/home/berkay/finalprj_ws/src/tgr_msgs/msg/PixelPose.msg;/home/berkay/finalprj_ws/src/tgr_msgs/msg/PixelPoses.msg;/home/berkay/finalprj_ws/src/tgr_msgs/msg/VehicleMode.msg")
+set(tgr_msgs_SERVICE_FILES "")

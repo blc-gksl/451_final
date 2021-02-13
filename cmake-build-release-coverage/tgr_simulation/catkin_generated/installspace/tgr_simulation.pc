@@ -1,0 +1,8 @@
+prefix=/home/berkay/finalprj_ws/install
+
+Name: tgr_simulation
+Description: Description of tgr_simulation
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: roscpp gazebo_ros

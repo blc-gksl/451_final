@@ -1,0 +1,3 @@
+tgr_msgs/PixelPose pixel_0
+tgr_msgs/PixelPose pixel_1
+tgr_msgs/PixelPose pixel_2

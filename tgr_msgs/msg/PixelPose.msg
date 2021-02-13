@@ -1,0 +1,2 @@
+int32 vertical
+int32 horizontal
